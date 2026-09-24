@@ -28,6 +28,8 @@ export function createPostStore() {
 export function createUserStore() {
   const usersByEmail = new Map();
   const usersByUsername = new Map();
+  // username -> Set<username> of the users that username follows.
+  const following = new Map();
 
   return {
     hasEmail(email) {
@@ -59,6 +61,45 @@ export function createUserStore() {
     },
     findByUsername(username) {
       return usersByUsername.get(username);
+    },
+    isFollowing(follower, followee) {
+      return following.get(follower)?.has(followee) ?? false;
+    },
+    /** Follows `followee` from `follower`. Idempotent; bumps both counts. */
+    follow(follower, followee) {
+      const followerUser = usersByUsername.get(follower);
+      const followeeUser = usersByUsername.get(followee);
+      if (!followerUser || !followeeUser) {
+        return false;
+      }
+      let edges = following.get(follower);
+      if (!edges) {
+        edges = new Set();
+        following.set(follower, edges);
+      }
+      if (edges.has(followee)) {
+        return true; // already following
+      }
+      edges.add(followee);
+      followeeUser.followers += 1;
+      followerUser.following += 1;
+      return true;
+    },
+    /** Unfollows `followee` from `follower`. Idempotent; decrements both counts. */
+    unfollow(follower, followee) {
+      const followerUser = usersByUsername.get(follower);
+      const followeeUser = usersByUsername.get(followee);
+      if (!followerUser || !followeeUser) {
+        return false;
+      }
+      const edges = following.get(follower);
+      if (!edges || !edges.has(followee)) {
+        return true; // not following
+      }
+      edges.delete(followee);
+      followeeUser.followers -= 1;
+      followerUser.following -= 1;
+      return true;
     },
   };
 }
