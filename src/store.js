@@ -1,3 +1,29 @@
+/** In-memory post store. Persistence lands in a later story. */
+export function createPostStore() {
+  const posts = new Map();
+  let nextId = 1;
+
+  return {
+    add({ author, caption = "" }) {
+      const id = String(nextId++);
+      const post = {
+        id,
+        imageUrl: `/posts/${id}/image`,
+        caption,
+        author,
+      };
+      posts.set(id, post);
+      return post;
+    },
+    list() {
+      return [...posts.values()];
+    },
+    findById(id) {
+      return posts.get(id);
+    },
+  };
+}
+
 /** In-memory user store. Persistence lands in a later story. */
 export function createUserStore() {
   const usersByEmail = new Map();

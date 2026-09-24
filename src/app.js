@@ -1,15 +1,37 @@
 import { createServer } from "node:http";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { createUserStore } from "./store.js";
+import { createUserStore, createPostStore } from "./store.js";
 
 // Dev-only fallback so the app boots without configuration. Real deployments
 // must set JWT_SECRET in the environment.
 const DEV_JWT_SECRET = "dev-only-secret-change-me";
 
+const MAX_POST_BYTES = 10 * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png"]);
+
 function sendJson(res, status, body) {
   res.writeHead(status, { "content-type": "application/json" });
   res.end(JSON.stringify(body));
+}
+
+/** Reads the raw request body, capping memory at `maxBytes`. */
+async function readRawBody(req, { maxBytes } = {}) {
+  const chunks = [];
+  let size = 0;
+  let tooLarge = false;
+  for await (const chunk of req) {
+    if (tooLarge) {
+      continue; // drain the rest of the stream without buffering it
+    }
+    size += chunk.length;
+    if (maxBytes !== undefined && size > maxBytes) {
+      tooLarge = true;
+      continue;
+    }
+    chunks.push(chunk);
+  }
+  return { tooLarge, body: Buffer.concat(chunks) };
 }
 
 async function readJson(req) {
@@ -55,8 +77,9 @@ function publicProfile(user) {
 }
 
 /** Builds the HTTP server; routes are added here as Jira stories land. */
-export function createApp({ users } = {}) {
+export function createApp({ users, posts } = {}) {
   const store = users ?? createUserStore();
+  const postStore = posts ?? createPostStore();
 
   return createServer(async (req, res) => {
     const url = new URL(req.url, "http://localhost");
@@ -192,6 +215,45 @@ export function createApp({ users } = {}) {
       }
 
       sendJson(res, 200, publicProfile(user));
+      return;
+    }
+
+    if (req.method === "POST" && path === "/posts") {
+      const token = authenticate(req);
+      const user = token && store.findByEmail(token.sub);
+      if (!user) {
+        sendJson(res, 401, { error: "unauthorized" });
+        return;
+      }
+
+      const contentType = (req.headers["content-type"] ?? "")
+        .split(";")[0]
+        .trim()
+        .toLowerCase();
+      if (!ACCEPTED_IMAGE_TYPES.has(contentType)) {
+        sendJson(res, 415, {
+          error: "content type must be image/jpeg or image/png",
+        });
+        return;
+      }
+
+      const contentLength = Number(req.headers["content-length"] ?? "0");
+      if (Number.isFinite(contentLength) && contentLength > MAX_POST_BYTES) {
+        sendJson(res, 413, { error: "image exceeds 10 MB limit" });
+        return;
+      }
+
+      const { tooLarge } = await readRawBody(req, { maxBytes: MAX_POST_BYTES });
+      if (tooLarge) {
+        sendJson(res, 413, { error: "image exceeds 10 MB limit" });
+        return;
+      }
+
+      const caption = url.searchParams.get("caption") ?? "";
+      const post = postStore.add({ author: user.username, caption });
+      user.posts += 1;
+
+      sendJson(res, 201, post);
       return;
     }
 
