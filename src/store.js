@@ -2,6 +2,7 @@
 export function createPostStore() {
   const posts = new Map();
   let nextId = 1;
+  let nextCommentId = 1;
 
   return {
     add({ author, caption = "" }) {
@@ -11,6 +12,10 @@ export function createPostStore() {
         imageUrl: `/posts/${id}/image`,
         caption,
         author,
+        likeCount: 0,
+        commentCount: 0,
+        likedBy: new Set(),
+        comments: [],
       };
       posts.set(id, post);
       return post;
@@ -20,6 +25,35 @@ export function createPostStore() {
     },
     findById(id) {
       return posts.get(id);
+    },
+    /** Likes a post. Idempotent; returns the new like count. */
+    like(id, username) {
+      const post = posts.get(id);
+      if (!post) return null;
+      if (!post.likedBy.has(username)) {
+        post.likedBy.add(username);
+        post.likeCount += 1;
+      }
+      return post.likeCount;
+    },
+    /** Unlikes a post. Idempotent; returns the new like count. */
+    unlike(id, username) {
+      const post = posts.get(id);
+      if (!post) return null;
+      if (post.likedBy.has(username)) {
+        post.likedBy.delete(username);
+        post.likeCount -= 1;
+      }
+      return post.likeCount;
+    },
+    /** Adds a comment; returns the stored comment, or null for an unknown post. */
+    addComment(id, { author, text }) {
+      const post = posts.get(id);
+      if (!post) return null;
+      const comment = { id: String(nextCommentId++), author, text };
+      post.comments.push(comment);
+      post.commentCount = post.comments.length;
+      return comment;
     },
   };
 }

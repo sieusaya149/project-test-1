@@ -76,6 +76,18 @@ function publicProfile(user) {
   };
 }
 
+/** The public post shape shared by POST /posts, GET /posts and GET /posts/:id. */
+function publicPost(post) {
+  return {
+    id: post.id,
+    imageUrl: post.imageUrl,
+    caption: post.caption,
+    author: post.author,
+    likeCount: post.likeCount,
+    commentCount: post.commentCount,
+  };
+}
+
 /** Builds the HTTP server; routes are added here as Jira stories land. */
 export function createApp({ users, posts } = {}) {
   const store = users ?? createUserStore();
@@ -292,7 +304,87 @@ export function createApp({ users, posts } = {}) {
       const post = postStore.add({ author: user.username, caption });
       user.posts += 1;
 
-      sendJson(res, 201, post);
+      sendJson(res, 201, publicPost(post));
+      return;
+    }
+
+    const likeMatch = /^\/posts\/([^/]+)\/like$/.exec(path);
+    if (likeMatch && (req.method === "POST" || req.method === "DELETE")) {
+      const token = authenticate(req);
+      const user = token && store.findByEmail(token.sub);
+      if (!user) {
+        sendJson(res, 401, { error: "unauthorized" });
+        return;
+      }
+
+      const post = postStore.findById(likeMatch[1]);
+      if (!post) {
+        sendJson(res, 404, { error: "post not found" });
+        return;
+      }
+
+      const liked = req.method === "POST";
+      if (liked) {
+        postStore.like(post.id, user.username);
+      } else {
+        postStore.unlike(post.id, user.username);
+      }
+
+      sendJson(res, 200, { liked, likeCount: post.likeCount });
+      return;
+    }
+
+    const commentsMatch = /^\/posts\/([^/]+)\/comments$/.exec(path);
+    if (commentsMatch && req.method === "POST") {
+      const token = authenticate(req);
+      const user = token && store.findByEmail(token.sub);
+      if (!user) {
+        sendJson(res, 401, { error: "unauthorized" });
+        return;
+      }
+
+      const post = postStore.findById(commentsMatch[1]);
+      if (!post) {
+        sendJson(res, 404, { error: "post not found" });
+        return;
+      }
+
+      let body;
+      try {
+        body = await readJson(req);
+      } catch {
+        sendJson(res, 400, { error: "invalid JSON body" });
+        return;
+      }
+
+      const text = typeof body.text === "string" ? body.text.trim() : "";
+      if (text.length < 1 || text.length > 500) {
+        sendJson(res, 400, { error: "comment must be 1-500 characters" });
+        return;
+      }
+
+      const comment = postStore.addComment(post.id, {
+        author: user.username,
+        text,
+      });
+      sendJson(res, 201, comment);
+      return;
+    }
+
+    if (req.method === "GET" && path === "/posts") {
+      sendJson(res, 200, postStore.list().map(publicPost));
+      return;
+    }
+
+    const postMatch = /^\/posts\/([^/]+)$/.exec(path);
+    if (postMatch && req.method === "GET") {
+      const post = postStore.findById(postMatch[1]);
+      if (!post) {
+        sendJson(res, 404, { error: "post not found" });
+        return;
+      }
+
+      sendJson(res, 200, publicPost(post));
       return;
     }
 
