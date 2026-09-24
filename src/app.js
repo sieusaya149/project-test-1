@@ -376,6 +376,48 @@ export function createApp({ users, posts } = {}) {
       return;
     }
 
+    if (req.method === "GET" && path === "/feed") {
+      const token = authenticate(req);
+      const user = token && store.findByEmail(token.sub);
+      if (!user) {
+        sendJson(res, 401, { error: "unauthorized" });
+        return;
+      }
+
+      const feedAuthors = new Set([
+        user.username,
+        ...store.followingList(user.username),
+      ]);
+
+      const feedPosts = postStore
+        .list()
+        .filter((post) => feedAuthors.has(post.author))
+        .sort((a, b) => Number(b.id) - Number(a.id));
+
+      // `?cursor=<id>` continues from the last post id seen; only strictly
+      // older posts are returned so a page can never repeat a post.
+      const cursorParam = url.searchParams.get("cursor");
+      let before = Number.POSITIVE_INFINITY;
+      if (cursorParam !== null) {
+        const parsed = Number(cursorParam);
+        if (Number.isInteger(parsed) && parsed >= 0) {
+          before = parsed;
+        }
+      }
+
+      const page = feedPosts.filter((post) => Number(post.id) < before);
+      const FEED_PAGE_SIZE = 20;
+      const result = page.slice(0, FEED_PAGE_SIZE);
+      const nextCursor =
+        page.length > FEED_PAGE_SIZE ? result[result.length - 1].id : null;
+
+      sendJson(res, 200, {
+        posts: result.map(publicPost),
+        nextCursor,
+      });
+      return;
+    }
+
     const postMatch = /^\/posts\/([^/]+)$/.exec(path);
     if (postMatch && req.method === "GET") {
       const post = postStore.findById(postMatch[1]);
