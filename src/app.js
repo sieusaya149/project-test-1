@@ -218,6 +218,45 @@ export function createApp({ users, posts } = {}) {
       return;
     }
 
+    const followMatch = /^\/users\/([^/]+)\/follow$/.exec(path);
+    if (followMatch && (req.method === "POST" || req.method === "DELETE")) {
+      const token = authenticate(req);
+      const actor = token && store.findByEmail(token.sub);
+      if (!actor) {
+        sendJson(res, 401, { error: "unauthorized" });
+        return;
+      }
+
+      let username;
+      try {
+        username = decodeURIComponent(followMatch[1]);
+      } catch {
+        username = followMatch[1];
+      }
+
+      const target = store.findByUsername(username);
+      if (!target) {
+        sendJson(res, 404, { error: "user not found" });
+        return;
+      }
+
+      if (actor.username === target.username) {
+        sendJson(res, 400, { error: "cannot follow yourself" });
+        return;
+      }
+
+      if (req.method === "POST") {
+        store.follow(actor.username, target.username);
+      } else {
+        store.unfollow(actor.username, target.username);
+      }
+
+      sendJson(res, 200, {
+        following: store.isFollowing(actor.username, target.username),
+      });
+      return;
+    }
+
     if (req.method === "POST" && path === "/posts") {
       const token = authenticate(req);
       const user = token && store.findByEmail(token.sub);
