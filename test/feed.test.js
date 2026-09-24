@@ -168,6 +168,53 @@ test("pages never repeat a post, including across a refresh of the first page", 
   }
 });
 
+test("pull-to-refresh after paging never re-serves a post (IN-10)", async () => {
+  const { base, close } = await startApp(createApp());
+  try {
+    await signup(base, "alice@example.com", "alice");
+    await signup(base, "bob@example.com", "bob");
+    const alice = await login(base, "alice@example.com");
+    const bob = await login(base, "bob@example.com");
+
+    await follow(base, alice, "bob");
+
+    for (let i = 0; i < 25; i += 1) {
+      await postImage(base, bob, `post ${i + 1}`);
+    }
+
+    // 1. Open the feed, then scroll to page 2.
+    const first = await getFeed(base, alice);
+    assert.equal(first.posts.length, 20);
+    const second = await getFeed(base, alice, first.nextCursor);
+    assert.equal(second.posts.length, 5);
+
+    // 2. A new post arrives while the user is paging. With an offset/limit
+    //    cursor this shifts page boundaries; the anchor must stay stable.
+    await postImage(base, bob, "post 26 (arrives before refresh)");
+
+    // 3. Pull to refresh re-fetches page 1.
+    const refreshed = await getFeed(base, alice);
+
+    // 4. Scroll to page 2 again using the refreshed cursor.
+    const secondAgain = await getFeed(base, alice, refreshed.nextCursor);
+
+    const page1Ids = refreshed.posts.map((p) => p.id);
+    const page2Ids = secondAgain.posts.map((p) => p.id);
+
+    // The newest post of page 1 must never reappear on page 2.
+    assert.equal(page2Ids.includes(page1Ids[0]), false);
+
+    // The two refreshed pages together cover all 26 posts exactly once.
+    const allIds = [...page1Ids, ...page2Ids];
+    assert.equal(allIds.length, 26);
+    assert.equal(new Set(allIds).size, 26);
+    assert.equal(secondAgain.posts.length, 6);
+    assert.equal(secondAgain.nextCursor, null);
+  } finally {
+    await close();
+  }
+});
+
 test("GET /feed requires authentication", async () => {
   const { base, close } = await startApp(createApp());
   try {
