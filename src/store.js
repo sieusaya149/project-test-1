@@ -99,6 +99,10 @@ export function createUserStore() {
     isFollowing(follower, followee) {
       return following.get(follower)?.has(followee) ?? false;
     },
+    /** Returns the usernames `username` follows, as an array. */
+    followingList(username) {
+      return [...(following.get(username) ?? [])];
+    },
     /** Follows `followee` from `follower`. Idempotent; bumps both counts. */
     follow(follower, followee) {
       const followerUser = usersByUsername.get(follower);
