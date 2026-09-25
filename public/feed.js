@@ -4,7 +4,7 @@
 // No framework and no build step.
 
 const POSTS_ENDPOINT = "/posts";
-const LOGIN_PATH = "/login";
+const LOGIN_PATH = "/login.html";
 const AUTH_TOKEN_KEY = "instaclone.token";
 
 // Post ids the current user has liked this session. The public /posts feed does

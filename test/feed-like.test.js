@@ -55,7 +55,7 @@ test("like button sends a logged-out user to log in without calling the API", as
 
   await feed.toggleLike(post, button);
 
-  assert.deepEqual(assignCalls, ["/login"]);
+  assert.deepEqual(assignCalls, ["/login.html"]);
   assert.equal(fetchCalls.length, 0);
 });
 
@@ -127,5 +127,5 @@ test("like button sends the user to log in when the API returns 401", async () =
 
   await feed.toggleLike(post, button);
 
-  assert.deepEqual(assignCalls, ["/login"]);
+  assert.deepEqual(assignCalls, ["/login.html"]);
 });
