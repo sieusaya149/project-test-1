@@ -1,7 +1,14 @@
 import { createServer } from "node:http";
+import { readFileSync } from "node:fs";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { createUserStore, createPostStore } from "./store.js";
+
+// Read the app version straight from package.json so the health endpoint never
+// hardcodes it (and can't drift from the published version).
+const { version: APP_VERSION } = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+);
 
 // Dev-only fallback so the app boots without configuration. Real deployments
 // must set JWT_SECRET in the environment.
@@ -98,7 +105,7 @@ export function createApp({ users, posts } = {}) {
     const path = url.pathname;
 
     if (req.method === "GET" && path === "/health") {
-      sendJson(res, 200, { status: "ok" });
+      sendJson(res, 200, { status: "ok", version: APP_VERSION });
       return;
     }
 
