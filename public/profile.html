@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Profile — InstaClone</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <span class="app-name">InstaClone</span>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="/" class="nav-link">Feed</a>
+        <a href="/new-post" class="nav-link">New post</a>
+        <a href="/profile.html" class="nav-link">Profile</a>
+        <a href="/login.html" class="nav-link" data-auth="out">Log in</a>
+        <a href="/signup.html" class="nav-link" data-auth="out">Sign up</a>
+        <a href="#" class="nav-link" id="logout-link" data-auth="in" hidden>Log out</a>
+      </nav>
+    </header>
+
+    <main class="site-main">
+      <h1 class="profile-title">Profile</h1>
+      <section id="profile" class="profile" aria-live="polite">
+        <p class="profile-status">Loading…</p>
+      </section>
+
+      <section id="edit-profile" class="edit-profile" hidden>
+        <h2>Edit profile</h2>
+        <form id="edit-profile-form" class="auth-form" novalidate>
+          <label for="avatar-url">Avatar URL</label>
+          <input
+            id="avatar-url"
+            name="avatarUrl"
+            type="url"
+            autocomplete="url"
+          />
+
+          <label for="bio">Bio</label>
+          <textarea id="bio" name="bio" rows="3"></textarea>
+
+          <p id="edit-error" class="form-error" role="alert" hidden></p>
+
+          <button type="submit">Save</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+    <script src="/auth.js"></script>
+    <script src="/profile.js"></script>
+  </body>
+</html>
