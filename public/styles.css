@@ -53,3 +53,56 @@ body {
   margin: 2rem auto;
   padding: 0 1.5rem;
 }
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 24rem;
+}
+
+.auth-form label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.auth-form input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.auth-form input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.auth-form button {
+  margin-top: 0.5rem;
+  padding: 0.55rem 1rem;
+  border: none;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-form button:hover {
+  filter: brightness(0.95);
+}
+
+.form-error {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #f5c6c6;
+  border-radius: 4px;
+  background: #fdecea;
+  color: #b71c1c;
+}
+
+.auth-alt {
+  font-size: 0.9rem;
+}
