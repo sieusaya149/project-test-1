@@ -15,4 +15,5 @@ npm start          # http://localhost:3000/health
 
 ```sh
 npm test           # node's built-in test runner; CI runs the same on every push and PR
+npm run coverage   # same tests plus a coverage report; fails when line coverage < 80%
 ```
