@@ -1,6 +1,7 @@
 // Shared authentication helpers for the plain-JS frontend. No framework, no
-// build step. The JWT is kept in localStorage under `token`.
-const TOKEN_KEY = "token";
+// build step. The JWT is kept in localStorage under `instaclone.token` (the
+// same key the feed script reads).
+const TOKEN_KEY = "instaclone.token";
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);

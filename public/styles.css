@@ -106,3 +106,90 @@ body {
 .auth-alt {
   font-size: 0.9rem;
 }
+
+.feed-title {
+  font-size: 1.5rem;
+  margin: 0 0 1rem;
+}
+
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.feed-status,
+.feed-empty {
+  color: #8e8e8e;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.post {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.post-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.post-author {
+  font-weight: 600;
+}
+
+.post-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #efefef;
+}
+
+.post-body {
+  padding: 0.75rem 1rem;
+}
+
+.post-caption {
+  margin: 0 0 0.5rem;
+}
+
+.post-meta {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: #8e8e8e;
+}
+
+.like-button {
+  background: none;
+  border: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.like-button:hover {
+  color: var(--accent);
+}
+
+.like-button.is-liked {
+  color: #ed4956;
+}
+
+.like-button:disabled {
+  cursor: default;
+}
