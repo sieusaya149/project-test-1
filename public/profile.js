@@ -156,7 +156,7 @@ async function saveProfile(form) {
     body: JSON.stringify(fields),
   });
   if (res.status === 401) {
-    goToLogin(); // stale/expired token → log in again
+    handleUnauthorized(); // expired/invalid token → clear it and log in again
     return null;
   }
   const body = await res.json().catch(() => ({}));

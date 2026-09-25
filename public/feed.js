@@ -78,7 +78,7 @@ async function toggleLike(post, button) {
       headers: { authorization: `Bearer ${token}` },
     });
     if (res.status === 401) {
-      goToLogin(); // stale/expired token → log in again
+      handleUnauthorized(); // expired/invalid token → clear it and log in again
       return;
     }
     if (!res.ok) {
