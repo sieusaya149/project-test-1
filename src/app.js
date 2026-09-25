@@ -1,5 +1,7 @@
 import { createServer } from "node:http";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
+import { resolve, relative, extname } from "node:path";
+import { fileURLToPath } from "node:url";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { createUserStore, createPostStore } from "./store.js";
@@ -9,6 +11,27 @@ import { createUserStore, createPostStore } from "./store.js";
 const { version: APP_VERSION } = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 );
+
+// The web frontend lives under public/ and is served straight off disk. It is a
+// plain HTML/CSS/JS shell (no framework, no build step) so the API can serve it
+// directly.
+const PUBLIC_DIR = fileURLToPath(new URL("../public", import.meta.url));
+
+const STATIC_CONTENT_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon",
+};
 
 // Dev-only fallback so the app boots without configuration. Real deployments
 // must set JWT_SECRET in the environment.
@@ -20,6 +43,30 @@ const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png"]);
 function sendJson(res, status, body) {
   res.writeHead(status, { "content-type": "application/json" });
   res.end(JSON.stringify(body));
+}
+
+/**
+ * Maps a URL pathname to an absolute path inside public/, or null when it points
+ * outside public/ (path traversal) or fails to decode. `pathname` comes from
+ * `new URL(...).pathname`, which already strips literal `..` segments, so the
+ * decode + segment check here guards against encoded traversal like `%2e%2e%2f`.
+ */
+function publicFilePath(pathname) {
+  let decoded;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return null;
+  }
+  if (decoded.includes("\0")) return null;
+
+  const rel = decoded === "/" ? "index.html" : decoded.replace(/^\/+/, "");
+  if (rel.split(/[/\\]/).includes("..")) return null;
+
+  const abs = resolve(PUBLIC_DIR, rel);
+  const within = relative(PUBLIC_DIR, abs);
+  if (within === "" || within.split(/[/\\]/)[0] === "..") return null;
+  return abs;
 }
 
 /** Reads the raw request body, capping memory at `maxBytes`. */
@@ -103,6 +150,30 @@ export function createApp({ users, posts } = {}) {
   return createServer(async (req, res) => {
     const url = new URL(req.url, "http://localhost");
     const path = url.pathname;
+
+    if (req.method === "GET" || req.method === "HEAD") {
+      const filePath = publicFilePath(path);
+      if (filePath) {
+        let stat = null;
+        try {
+          stat = statSync(filePath);
+        } catch {
+          // missing file -> fall through to the 404 below
+        }
+        if (stat && stat.isFile()) {
+          const contentType =
+            STATIC_CONTENT_TYPES[extname(filePath).toLowerCase()] ??
+            "application/octet-stream";
+          const body = readFileSync(filePath);
+          res.writeHead(200, {
+            "content-type": contentType,
+            "content-length": body.length,
+          });
+          res.end(req.method === "HEAD" ? undefined : body);
+          return;
+        }
+      }
+    }
 
     if (req.method === "GET" && path === "/health") {
       sendJson(res, 200, { status: "ok", version: APP_VERSION });
