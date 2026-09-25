@@ -19,6 +19,25 @@ function isLoggedIn() {
   return Boolean(getToken());
 }
 
+// The notice the log-in page shows after a 401 (expired or invalid token).
+const SESSION_ENDED_MESSAGE = "Your session has ended — please log in again";
+// Session-scoped flag carrying that notice across the redirect to /login.html.
+const SESSION_ENDED_FLAG = "instaclone.session-ended";
+
+// Handles a 401 from the API: drop the now-invalid token, flag the session-ended
+// notice for the log-in page, and send the user there instead of leaving them on
+// a broken page.
+function handleUnauthorized() {
+  clearToken();
+  try {
+    sessionStorage.setItem(SESSION_ENDED_FLAG, "1");
+  } catch {
+    // sessionStorage can be unavailable in some privacy modes; the redirect
+    // below still logs the user out.
+  }
+  window.location.assign("/login.html");
+}
+
 // Shows the log-in / sign-up links when logged out and the log-out link when
 // logged in. Nav items opt in with data-auth="in" (only when logged in) or
 // data-auth="out" (only when logged out).
@@ -97,6 +116,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const loginForm = document.getElementById("login-form");
   if (loginForm) {
+    // After a 401 the user is redirected here with the session-ended flag set;
+    // surface the notice once and consume it.
+    let sessionEnded = false;
+    try {
+      sessionEnded = sessionStorage.getItem(SESSION_ENDED_FLAG) === "1";
+      if (sessionEnded) {
+        sessionStorage.removeItem(SESSION_ENDED_FLAG);
+      }
+    } catch {
+      // ignore; the log-in form still works.
+    }
+    if (sessionEnded) {
+      setError(SESSION_ENDED_MESSAGE);
+    }
+
     loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       setError("");

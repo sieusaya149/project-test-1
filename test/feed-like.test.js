@@ -13,6 +13,13 @@ const FEED_JS = readFileSync(
   "utf8",
 );
 
+// auth.js holds the shared 401/session-ended handling feed.js calls into, so we
+// evaluate it in the same context to exercise the real integration path.
+const AUTH_JS = readFileSync(
+  fileURLToPath(new URL("../public/auth.js", import.meta.url)),
+  "utf8",
+);
+
 /** A minimal fake <button> that records the fields renderLikeButton touches. */
 function makeButton() {
   return {
@@ -26,10 +33,20 @@ function makeButton() {
 async function setup({ token = null, fetchImpl } = {}) {
   const assignCalls = [];
   const fetchCalls = [];
+  const removedTokenKeys = [];
+  const sessionFlags = {};
 
   const context = {
     console,
-    localStorage: { getItem: (key) => (key === "instaclone.token" ? token : null) },
+    localStorage: {
+      getItem: (key) => (key === "instaclone.token" ? token : null),
+      removeItem: (key) => removedTokenKeys.push(key),
+    },
+    sessionStorage: {
+      setItem: (key, value) => {
+        sessionFlags[key] = value;
+      },
+    },
     window: { location: { assign: (url) => assignCalls.push(url) } },
     document: { addEventListener() {} },
     fetch: async (url, options) => {
@@ -41,11 +58,17 @@ async function setup({ token = null, fetchImpl } = {}) {
 
   vm.createContext(context);
   vm.runInContext(
-    `${FEED_JS}\n;globalThis.__feed = { toggleLike, likeButton, renderLikeButton };`,
+    `${AUTH_JS}\n${FEED_JS}\n;globalThis.__feed = { toggleLike, likeButton, renderLikeButton };`,
     context,
   );
 
-  return { feed: context.__feed, assignCalls, fetchCalls };
+  return {
+    feed: context.__feed,
+    assignCalls,
+    fetchCalls,
+    removedTokenKeys,
+    sessionFlags,
+  };
 }
 
 test("like button sends a logged-out user to log in without calling the API", async () => {
@@ -119,13 +142,22 @@ test("like button reverts the count when the request fails", async () => {
   assert.equal(button.disabled, false);
 });
 
-test("like button sends the user to log in when the API returns 401", async () => {
+test("like button clears the stored token and sends the user to log in when the API returns 401", async () => {
   const fetchImpl = async () => ({ ok: false, status: 401, json: async () => ({}) });
-  const { feed, assignCalls } = await setup({ token: "stale-token", fetchImpl });
+  const { feed, assignCalls, removedTokenKeys, sessionFlags } = await setup({
+    token: "stale-token",
+    fetchImpl,
+  });
   const post = { id: "1", likeCount: 0, author: "alice" };
   const button = makeButton();
 
   await feed.toggleLike(post, button);
 
   assert.deepEqual(assignCalls, ["/login.html"]);
+  assert.deepEqual(removedTokenKeys, ["instaclone.token"], "the token must be cleared");
+  assert.equal(
+    sessionFlags["instaclone.session-ended"],
+    "1",
+    "the session-ended notice must be flagged",
+  );
 });
