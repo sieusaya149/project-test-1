@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Log in — InstaClone</title>
+    <title>New post — InstaClone</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -20,35 +20,28 @@
     </header>
 
     <main class="site-main">
-      <h1>Log in</h1>
-      <form id="login-form" class="auth-form" novalidate>
-        <label for="email">Email</label>
+      <h1>New post</h1>
+      <form id="new-post-form" class="new-post-form" novalidate>
+        <label for="image">Photo (JPEG or PNG, up to 10 MB)</label>
         <input
-          id="email"
-          name="email"
-          type="email"
-          autocomplete="email"
+          id="image"
+          name="image"
+          type="file"
+          accept="image/jpeg,image/png"
           required
         />
 
-        <label for="password">Password</label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autocomplete="current-password"
-          required
-        />
+        <label for="caption">Caption</label>
+        <textarea id="caption" name="caption" rows="3"></textarea>
 
         <p id="form-error" class="form-error" role="alert" hidden></p>
 
-        <button type="submit">Log in</button>
+        <button type="submit">Post</button>
       </form>
-
-      <p class="auth-alt">No account? <a href="/signup.html">Sign up</a></p>
     </main>
 
     <script src="/app.js"></script>
     <script src="/auth.js"></script>
+    <script src="/new-post.js"></script>
   </body>
 </html>
