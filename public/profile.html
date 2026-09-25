@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Log in — InstaClone</title>
+    <title>Profile — InstaClone</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -20,35 +20,34 @@
     </header>
 
     <main class="site-main">
-      <h1>Log in</h1>
-      <form id="login-form" class="auth-form" novalidate>
-        <label for="email">Email</label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          autocomplete="email"
-          required
-        />
+      <h1 class="profile-title">Profile</h1>
+      <section id="profile" class="profile" aria-live="polite">
+        <p class="profile-status">Loading…</p>
+      </section>
 
-        <label for="password">Password</label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autocomplete="current-password"
-          required
-        />
+      <section id="edit-profile" class="edit-profile" hidden>
+        <h2>Edit profile</h2>
+        <form id="edit-profile-form" class="auth-form" novalidate>
+          <label for="avatar-url">Avatar URL</label>
+          <input
+            id="avatar-url"
+            name="avatarUrl"
+            type="url"
+            autocomplete="url"
+          />
 
-        <p id="form-error" class="form-error" role="alert" hidden></p>
+          <label for="bio">Bio</label>
+          <textarea id="bio" name="bio" rows="3"></textarea>
 
-        <button type="submit">Log in</button>
-      </form>
+          <p id="edit-error" class="form-error" role="alert" hidden></p>
 
-      <p class="auth-alt">No account? <a href="/signup.html">Sign up</a></p>
+          <button type="submit">Save</button>
+        </form>
+      </section>
     </main>
 
     <script src="/app.js"></script>
     <script src="/auth.js"></script>
+    <script src="/profile.js"></script>
   </body>
 </html>
