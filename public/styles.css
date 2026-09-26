@@ -313,6 +313,34 @@ body {
   word-break: break-word;
 }
 
+.follow-button {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 0.45rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.follow-button:hover {
+  filter: brightness(0.95);
+}
+
+.follow-button.is-following {
+  background: #fff;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.follow-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .edit-profile {
   margin-top: 1.5rem;
   background: #fff;

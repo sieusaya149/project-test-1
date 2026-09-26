@@ -8,6 +8,13 @@ const ME_ENDPOINT = "/users/me";
 const LOGIN_PATH = "/login.html";
 const AUTH_TOKEN_KEY = "instaclone.token";
 
+// Usernames the current user follows this session. The public profile endpoint
+// does not expose per-user follow state, so this starts empty and toggles in the
+// UI, mirroring the feed's like state.
+const followedUsers = new Set();
+// Usernames with a follow/unfollow request in flight, to avoid double-submits.
+const pendingFollows = new Set();
+
 /** Reads the stored JWT, or null when the user is not logged in. */
 function authToken() {
   try {
@@ -84,9 +91,7 @@ function renderProfile(container, profile) {
 
   const stats = document.createElement("p");
   stats.className = "profile-stats";
-  stats.textContent =
-    `${profile.posts} posts · ${profile.followers} followers · ` +
-    `${profile.following} following`;
+  stats.textContent = statsText(profile);
   info.appendChild(stats);
 
   if (profile.bio) {
@@ -97,7 +102,110 @@ function renderProfile(container, profile) {
   }
 
   card.appendChild(info);
+
+  // A follow/unfollow button appears on another user's profile (never your own).
+  if (currentUsername() !== profile.username) {
+    card.appendChild(followButton(profile, stats));
+  }
+
   container.appendChild(card);
+}
+
+/** The "posts · followers · following" stats line text. */
+function statsText(profile) {
+  return (
+    `${profile.posts} posts · ${profile.followers} followers · ` +
+    `${profile.following} following`
+  );
+}
+
+/** Paints the follow/unfollow button from the current follow state. */
+function renderFollowButton(button, profile) {
+  const following = followedUsers.has(profile.username);
+  button.textContent = following ? "Unfollow" : "Follow";
+  button.classList.toggle("is-following", following);
+  button.setAttribute("aria-pressed", String(following));
+  button.setAttribute(
+    "aria-label",
+    following ? `Unfollow ${profile.username}` : `Follow ${profile.username}`,
+  );
+}
+
+/** Builds the follow/unfollow button for another user's profile. */
+function followButton(profile, stats) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "follow-button";
+  renderFollowButton(button, profile);
+  button.addEventListener("click", () => toggleFollow(profile, button, stats));
+  return button;
+}
+
+/** Follows/unfollows optimistically, reverting the count if the request fails. */
+async function toggleFollow(profile, button, stats) {
+  const token = authToken();
+  if (!token) {
+    goToLogin();
+    return;
+  }
+  if (pendingFollows.has(profile.username)) {
+    return;
+  }
+
+  const wasFollowing = followedUsers.has(profile.username);
+  const previousFollowers = profile.followers;
+  const method = wasFollowing ? "DELETE" : "POST";
+
+  // Optimistic update: reflect the change immediately.
+  if (wasFollowing) {
+    followedUsers.delete(profile.username);
+    profile.followers = Math.max(0, profile.followers - 1);
+  } else {
+    followedUsers.add(profile.username);
+    profile.followers += 1;
+  }
+  renderFollowButton(button, profile);
+  if (stats) stats.textContent = statsText(profile);
+
+  pendingFollows.add(profile.username);
+  button.disabled = true;
+  try {
+    const res = await fetch(
+      `${USERS_ENDPOINT}/${encodeURIComponent(profile.username)}/follow`,
+      {
+        method,
+        headers: { authorization: `Bearer ${token}` },
+      },
+    );
+    if (res.status === 401) {
+      handleUnauthorized(); // expired/invalid token → clear it and log in again
+      return;
+    }
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    // The server's `following` flag is authoritative.
+    if (data.following) {
+      followedUsers.add(profile.username);
+    } else {
+      followedUsers.delete(profile.username);
+    }
+    renderFollowButton(button, profile);
+  } catch {
+    // Revert the optimistic update.
+    profile.followers = previousFollowers;
+    if (wasFollowing) {
+      followedUsers.add(profile.username);
+    } else {
+      followedUsers.delete(profile.username);
+    }
+    renderFollowButton(button, profile);
+    if (stats) stats.textContent = statsText(profile);
+  } finally {
+    pendingFollows.delete(profile.username);
+    button.disabled = false;
+  }
 }
 
 /** Renders a simple status message (loading / error / logged-out / not found). */
