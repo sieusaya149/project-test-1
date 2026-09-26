@@ -40,6 +40,9 @@ const DEV_JWT_SECRET = "dev-only-secret-change-me";
 const MAX_POST_BYTES = 10 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png"]);
 
+// GET /users?q= caps its results at this many matches.
+const SEARCH_RESULT_LIMIT = 20;
+
 // Failed log-in throttling: an email that racks up more than this many failures
 // within the window below is told to back off with a 429.
 const LOGIN_FAILURE_LIMIT = 5;
@@ -279,6 +282,23 @@ export function createApp({ users, posts } = {}) {
       );
 
       sendJson(res, 200, { token });
+      return;
+    }
+
+    if (req.method === "GET" && path === "/users") {
+      const q = (url.searchParams.get("q") ?? "").trim();
+      if (!q) {
+        // An empty or missing query matches nothing.
+        sendJson(res, 200, []);
+        return;
+      }
+      const needle = q.toLowerCase();
+      const matches = store
+        .usernames()
+        .filter((username) => username.toLowerCase().includes(needle))
+        .slice(0, SEARCH_RESULT_LIMIT)
+        .map((username) => ({ username }));
+      sendJson(res, 200, matches);
       return;
     }
 
