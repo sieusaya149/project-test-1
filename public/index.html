@@ -10,6 +10,17 @@
     <header class="site-header">
       <span class="app-name">InstaClone</span>
       <nav class="site-nav" aria-label="Primary">
+        <form id="search-form" class="search-form" role="search" aria-label="Search people">
+          <label for="search-input" class="visually-hidden">Search people</label>
+          <input
+            id="search-input"
+            name="q"
+            type="search"
+            placeholder="Search people"
+            autocomplete="off"
+          />
+          <ul id="search-results" class="search-results" hidden></ul>
+        </form>
         <a href="/" class="nav-link">Feed</a>
         <a href="/new-post.html" class="nav-link">New post</a>
         <a href="/profile.html" class="nav-link">Profile</a>
@@ -28,6 +39,7 @@
 
     <script src="/app.js"></script>
     <script src="/auth.js"></script>
+    <script src="/search.js"></script>
     <script src="/feed.js"></script>
   </body>
 </html>

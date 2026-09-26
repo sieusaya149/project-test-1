@@ -96,6 +96,10 @@ export function createUserStore() {
     findByUsername(username) {
       return usersByUsername.get(username);
     },
+    /** Returns every username in insertion order. */
+    usernames() {
+      return [...usersByUsername.keys()];
+    },
     isFollowing(follower, followee) {
       return following.get(follower)?.has(followee) ?? false;
     },
