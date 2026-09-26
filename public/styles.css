@@ -1,8 +1,36 @@
+/* Colours live in CSS custom properties so both themes read well. The light
+   palette is the default; `[data-theme="dark"]` (set on <html> by theme.js)
+   overrides it. */
 :root {
   --bg: #fafafa;
   --text: #262626;
   --accent: #0095f6;
   --border: #dbdbdb;
+  --surface: #ffffff;
+  --surface-alt: #efefef;
+  --muted: #8e8e8e;
+  --on-accent: #ffffff;
+  --danger: #ed4956;
+  --error-bg: #fdecea;
+  --error-border: #f5c6c6;
+  --error-text: #b71c1c;
+  --shadow: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] {
+  --bg: #000000;
+  --text: #f5f5f5;
+  --accent: #0095f6;
+  --border: #262626;
+  --surface: #121212;
+  --surface-alt: #1a1a1a;
+  --muted: #a8a8a8;
+  --on-accent: #ffffff;
+  --danger: #ff5c6c;
+  --error-bg: #3a1d1d;
+  --error-border: #6b2a2a;
+  --error-text: #ffb3b3;
+  --shadow: rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -23,8 +51,25 @@ body {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.75rem 1.5rem;
-  background: #fff;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
+}
+
+.theme-toggle {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .app-name {
@@ -89,11 +134,11 @@ body {
   min-width: 14rem;
   margin: 0;
   padding: 0.25rem 0;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 4px;
   list-style: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px var(--shadow);
   z-index: 10;
 }
 
@@ -149,7 +194,7 @@ body {
   border: none;
   border-radius: 4px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -162,10 +207,10 @@ body {
 .form-error {
   margin: 0;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #f5c6c6;
+  border: 1px solid var(--error-border);
   border-radius: 4px;
-  background: #fdecea;
-  color: #b71c1c;
+  background: var(--error-bg);
+  color: var(--error-text);
 }
 
 .auth-alt {
@@ -208,7 +253,7 @@ body {
   border: none;
   border-radius: 4px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -236,7 +281,7 @@ body {
 
 .feed-status,
 .feed-empty {
-  color: #8e8e8e;
+  color: var(--muted);
   text-align: center;
   padding: 2rem 0;
 }
@@ -248,7 +293,7 @@ body {
 }
 
 .post {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   overflow: hidden;
@@ -267,7 +312,7 @@ body {
   display: block;
   width: 100%;
   height: auto;
-  background: #efefef;
+  background: var(--surface-alt);
 }
 
 .post-body {
@@ -283,7 +328,7 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
-  color: #8e8e8e;
+  color: var(--muted);
 }
 
 .like-button {
@@ -303,7 +348,7 @@ body {
 }
 
 .like-button.is-liked {
-  color: #ed4956;
+  color: var(--danger);
 }
 
 .like-button:disabled {
@@ -361,7 +406,7 @@ body {
   border: none;
   border-radius: 4px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -374,7 +419,7 @@ body {
 .comment-error {
   flex-basis: 100%;
   margin: 0;
-  color: #b71c1c;
+  color: var(--error-text);
   font-size: 0.85rem;
 }
 
@@ -390,7 +435,7 @@ body {
 }
 
 .profile-status {
-  color: #8e8e8e;
+  color: var(--muted);
   text-align: center;
   padding: 2rem 0;
 }
@@ -399,7 +444,7 @@ body {
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   padding: 1.5rem;
@@ -410,7 +455,7 @@ body {
   height: 6rem;
   border-radius: 50%;
   object-fit: cover;
-  background: #efefef;
+  background: var(--surface-alt);
   flex-shrink: 0;
 }
 
@@ -420,7 +465,7 @@ body {
   justify-content: center;
   font-size: 2rem;
   font-weight: 700;
-  color: #8e8e8e;
+  color: var(--muted);
 }
 
 .profile-info {
@@ -434,7 +479,7 @@ body {
 
 .profile-stats {
   margin: 0 0 0.5rem;
-  color: #8e8e8e;
+  color: var(--muted);
 }
 
 .profile-bio {
@@ -450,7 +495,7 @@ body {
   border: 1px solid transparent;
   border-radius: 4px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
@@ -461,7 +506,7 @@ body {
 }
 
 .follow-button.is-following {
-  background: #fff;
+  background: var(--surface);
   color: var(--text);
   border-color: var(--border);
 }
@@ -473,7 +518,7 @@ body {
 
 .edit-profile {
   margin-top: 1.5rem;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   padding: 1.5rem;
