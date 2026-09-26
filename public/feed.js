@@ -1,7 +1,8 @@
 // Plain browser JS for the feed page: fetch posts from the API and render them
 // newest first. Each post carries a like button that likes/unlikes through the
-// API, updates the count immediately, and reverts it if the request fails.
-// No framework and no build step.
+// API, updates the count immediately, and reverts it if the request fails, plus
+// a list of its comments (newest last) and — for logged-in users — a box to add
+// one. No framework and no build step.
 
 const POSTS_ENDPOINT = "/posts";
 const LOGIN_PATH = "/login.html";
@@ -108,6 +109,139 @@ async function toggleLike(post, button) {
   }
 }
 
+/** Appends a single comment to a comments list, newest last. */
+function appendComment(list, comment) {
+  const item = document.createElement("li");
+  item.className = "comment";
+
+  const author = document.createElement("span");
+  author.className = "comment-author";
+  author.textContent = `@${comment.author}`;
+
+  const text = document.createElement("span");
+  text.className = "comment-text";
+  text.textContent = comment.text;
+
+  item.append(author, " ", text);
+  list.appendChild(item);
+}
+
+/** Builds the list of a post's comments (insertion order = newest last). */
+function commentsList(post) {
+  const list = document.createElement("ul");
+  list.className = "comment-list";
+  for (const comment of post.comments ?? []) {
+    appendComment(list, comment);
+  }
+  return list;
+}
+
+/**
+ * Adds a comment through POST /posts/:id/comments. Returns the created comment,
+ * or null after reporting a failure. An empty comment is refused before any
+ * request; a missing token or a 401 sends the user back to log in.
+ */
+async function submitComment({
+  post,
+  text,
+  token,
+  fetchImpl = fetch,
+  goToLogin = () => window.location.assign(LOGIN_PATH),
+  setError,
+}) {
+  const trimmed = typeof text === "string" ? text.trim() : "";
+  if (!token) {
+    goToLogin(LOGIN_PATH);
+    return null;
+  }
+  if (!trimmed) {
+    setError("Enter a comment before posting.");
+    return null;
+  }
+
+  try {
+    const res = await fetchImpl(`${POSTS_ENDPOINT}/${post.id}/comments`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ text: trimmed }),
+    });
+
+    if (res.status === 401) {
+      handleUnauthorized(); // expired/invalid token → clear it and log in again
+      return null;
+    }
+
+    if (!res.ok) {
+      let message = "Couldn't post your comment.";
+      try {
+        const body = await res.json();
+        if (body && body.error) {
+          message = body.error;
+        }
+      } catch {
+        // Non-JSON error body: keep the generic message.
+      }
+      setError(message);
+      return null;
+    }
+
+    return res.json();
+  } catch {
+    setError("Couldn't post your comment.");
+    return null;
+  }
+}
+
+/** Builds the add-a-comment form, wired to append the new comment on success. */
+function commentForm(post, list, countEl) {
+  const form = document.createElement("form");
+  form.className = "comment-form";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.name = "comment";
+  input.placeholder = "Add a comment…";
+  input.maxLength = 500;
+  input.setAttribute("aria-label", "Add a comment");
+
+  const submit = document.createElement("button");
+  submit.type = "submit";
+  submit.textContent = "Post";
+
+  const error = document.createElement("p");
+  error.className = "comment-error";
+  error.hidden = true;
+
+  form.append(input, submit, error);
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    error.hidden = true;
+    const comment = await submitComment({
+      post,
+      text: input.value,
+      token: authToken(),
+      setError: (message) => {
+        error.textContent = message;
+        error.hidden = !message;
+      },
+    });
+    if (comment) {
+      if (!post.comments) post.comments = [];
+      post.comments.push(comment);
+      appendComment(list, comment);
+      post.commentCount = post.comments.length;
+      countEl.textContent = `💬 ${post.commentCount}`;
+      input.value = "";
+    }
+  });
+
+  return form;
+}
+
 /** Builds the <article> element for a single post. */
 function postElement(post) {
   const article = document.createElement("article");
@@ -141,12 +275,20 @@ function postElement(post) {
   const meta = document.createElement("p");
   meta.className = "post-meta";
 
-  const comments = document.createElement("span");
-  comments.className = "post-comments";
-  comments.textContent = `💬 ${post.commentCount}`;
+  const commentCount = document.createElement("span");
+  commentCount.className = "post-comments";
+  commentCount.textContent = `💬 ${post.commentCount}`;
 
-  meta.append(likeButton(post), " ", comments);
+  meta.append(likeButton(post), " ", commentCount);
   body.appendChild(meta);
+
+  const comments = commentsList(post);
+  body.appendChild(comments);
+
+  if (authToken()) {
+    body.appendChild(commentForm(post, comments, commentCount));
+  }
+
   article.appendChild(body);
 
   return article;
