@@ -40,6 +40,11 @@ const DEV_JWT_SECRET = "dev-only-secret-change-me";
 const MAX_POST_BYTES = 10 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png"]);
 
+// Failed log-in throttling: an email that racks up more than this many failures
+// within the window below is told to back off with a 429.
+const LOGIN_FAILURE_LIMIT = 5;
+const LOGIN_FAILURE_WINDOW_MS = 15 * 60 * 1000;
+
 function sendJson(res, status, body) {
   res.writeHead(status, { "content-type": "application/json" });
   res.end(JSON.stringify(body));
@@ -147,6 +152,25 @@ export function createApp({ users, posts } = {}) {
   const store = users ?? createUserStore();
   const postStore = posts ?? createPostStore();
 
+  // email -> timestamps (ms) of failed log-in attempts inside the current
+  // window. In-memory only; one email's failures never touch another's.
+  const loginFailures = new Map();
+
+  /** Records a failed log-in and returns how many failures are now in-window. */
+  function recordLoginFailure(email) {
+    const now = Date.now();
+    const windowStart = now - LOGIN_FAILURE_WINDOW_MS;
+    const recent = (loginFailures.get(email) ?? []).filter((t) => t > windowStart);
+    recent.push(now);
+    loginFailures.set(email, recent);
+    return recent.length;
+  }
+
+  /** Clears a user's failed-attempt history (called on a successful log-in). */
+  function resetLoginFailures(email) {
+    loginFailures.delete(email);
+  }
+
   return createServer(async (req, res) => {
     const url = new URL(req.url, "http://localhost");
     const path = url.pathname;
@@ -232,9 +256,18 @@ export function createApp({ users, posts } = {}) {
         user && (await bcrypt.compare(password, user.passwordHash));
 
       if (!passwordOk) {
+        const failures = recordLoginFailure(email);
+        if (failures > LOGIN_FAILURE_LIMIT) {
+          sendJson(res, 429, {
+            error: "too many failed login attempts; try again later",
+          });
+          return;
+        }
         sendJson(res, 401, { error: "invalid credentials" });
         return;
       }
+
+      resetLoginFailures(email);
 
       const token = jwt.sign(
         { sub: user.email, username: user.username },
