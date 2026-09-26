@@ -144,6 +144,9 @@ function publicPost(post) {
     author: post.author,
     likeCount: post.likeCount,
     commentCount: post.commentCount,
+    // Comments stay in insertion order (oldest first), so the feed can show
+    // them newest-last. Each comment is already `{ id, author, text }`.
+    comments: post.comments,
   };
 }
 
